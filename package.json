@@ -1,0 +1,21 @@
+{
+  "name": "todo-cli",
+  "module": "src/index.tsx",
+  "type": "module",
+  "bin": {
+    "todo": "bin/todo.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.14"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "ink": "^6.8.0",
+    "ink-text-input": "^6.0.0",
+    "nanoid": "^5.1.6",
+    "react": "^19.2.4"
+  }
+}
