@@ -8,6 +8,7 @@ import {
   removeTodo,
   editTodo,
   setDueDate,
+  moveTodo,
 } from "../store/todos.ts";
 import type { Mode } from "../store/types.ts";
 import { isValidDate } from "../store/types.ts";
@@ -69,7 +70,7 @@ function App() {
     }
 
     if (mode === "delete") {
-      if (input === "y" || input === "Y") {
+      if (input === "y" || input === "Y" || key.return) {
         const todo = todos[cursor];
         if (todo) {
           removeTodo(todo.id);
@@ -104,7 +105,9 @@ function App() {
       const todo = todos[cursor];
       if (todo) {
         toggleTodo(todo.id);
-        refresh();
+        const updated = loadTodos();
+        setTodos(updated);
+        setCursor((c) => clampCursor(c, updated.length));
       }
     }
 
@@ -121,7 +124,26 @@ function App() {
       }
     }
 
+    if (input === "u" && todos.length > 0) {
+      const todo = todos[cursor];
+      if (todo && !todo.done) {
+        moveTodo(todo.id, "up");
+        refresh();
+        setCursor((c) => clampCursor(c - 1, todos.length));
+      }
+    }
+
     if (input === "d" && todos.length > 0) {
+      const todo = todos[cursor];
+      const undoneCount = todos.filter((t) => !t.done).length;
+      if (todo && !todo.done && cursor < undoneCount - 1) {
+        moveTodo(todo.id, "down");
+        refresh();
+        setCursor((c) => clampCursor(c + 1, todos.length));
+      }
+    }
+
+    if (input === "x" && todos.length > 0) {
       setMode("delete");
     }
 
@@ -138,13 +160,15 @@ function App() {
     (value: string) => {
       if (value.trim()) {
         addTodo(value.trim());
-        refresh();
-        setCursor(todos.length); // move to newly added item
+        const updated = loadTodos();
+        setTodos(updated);
+        const undoneCount = updated.filter((t) => !t.done).length;
+        setCursor(undoneCount - 1);
       }
       setMode("normal");
       setInputValue("");
     },
-    [todos.length, refresh]
+    [refresh]
   );
 
   const handleEditSubmit = useCallback(

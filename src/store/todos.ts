@@ -26,8 +26,28 @@ export function loadTodos(): Todo[] {
 }
 
 export function saveTodos(todos: Todo[]): void {
-  const store: TodoStore = { todos };
+  const undone = todos.filter((t) => !t.done);
+  const done = todos.filter((t) => t.done);
+  const store: TodoStore = { todos: [...undone, ...done] };
   writeFileSync(getTodoPath(), JSON.stringify(store, null, 2) + "\n");
+}
+
+export function moveTodo(id: string, direction: "up" | "down"): void {
+  const todos = loadTodos();
+  const index = todos.findIndex((t) => t.id.startsWith(id));
+  if (index === -1) throw new Error(`Todo not found: ${id}`);
+  const todo = todos[index]!;
+  if (todo.done) return;
+
+  const undoneCount = todos.filter((t) => !t.done).length;
+
+  if (direction === "up" && index > 0 && !todos[index - 1]!.done) {
+    [todos[index], todos[index - 1]] = [todos[index - 1]!, todos[index]!];
+  } else if (direction === "down" && index < undoneCount - 1) {
+    [todos[index], todos[index + 1]] = [todos[index + 1]!, todos[index]!];
+  }
+
+  saveTodos(todos);
 }
 
 export function addTodo(title: string, dueDate: string | null = null): Todo {

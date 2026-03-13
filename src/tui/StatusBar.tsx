@@ -39,7 +39,7 @@ export function StatusBar({ mode }: StatusBarProps) {
   return (
     <Box marginTop={1}>
       <Text dimColor>
-        j/k:move  space:toggle  a:add  e:edit  d:delete  D:due  q:quit
+        j/k:move  u/d:reorder  space:toggle  a:add  e:edit  x:delete  D:due  q:quit
       </Text>
     </Box>
   );
