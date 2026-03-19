@@ -15,12 +15,19 @@ export function TodoItem({ todo, selected }: TodoItemProps) {
   return (
     <Box>
       <Text
-        inverse={selected}
+        bold={selected}
+        color={selected ? "cyan" : undefined}
         dimColor={todo.done}
         strikethrough={todo.done}
       >
         {selected ? ">" : " "} {checkbox} {todo.title}
       </Text>
+      {todo.files?.length > 0 && (
+        <Text dimColor>
+          {" "}
+          [{todo.files.length} file{todo.files.length > 1 ? "s" : ""}]
+        </Text>
+      )}
       {dueInfo && (
         <Text color={dueInfo.color} dimColor={todo.done}>
           {" "}

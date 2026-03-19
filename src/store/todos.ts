@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from "fs";
+import { join, basename } from "path";
 import { nanoid } from "nanoid";
 import type { Todo, TodoStore } from "./types.ts";
 
@@ -17,7 +17,7 @@ export function loadTodos(): Todo[] {
   try {
     const raw = readFileSync(path, "utf-8");
     const data: TodoStore = JSON.parse(raw);
-    return data.todos;
+    return data.todos.map((t) => ({ ...t, files: t.files ?? [] }));
   } catch {
     throw new Error(
       `Corrupt ${TODO_FILE} file. Delete it and try again: rm ${path}`
@@ -57,6 +57,7 @@ export function addTodo(title: string, dueDate: string | null = null): Todo {
     title,
     done: false,
     dueDate,
+    files: [],
     createdAt: new Date().toISOString(),
   };
   todos.push(todo);
@@ -106,4 +107,27 @@ export function setDueDate(id: string, dueDate: string | null): Todo {
   todo.dueDate = dueDate;
   saveTodos(todos);
   return todo;
+}
+
+function getAttachmentsDir(todoId: string): string {
+  return join(process.cwd(), ".todos", "attachments", todoId);
+}
+
+export function attachFile(id: string, sourcePath: string): string {
+  const todos = loadTodos();
+  const todo = todos.find((t) => t.id.startsWith(id));
+  if (!todo) throw new Error(`Todo not found: ${id}`);
+
+  const dir = getAttachmentsDir(todo.id);
+  mkdirSync(dir, { recursive: true });
+
+  const fileName = basename(sourcePath);
+  const destPath = join(dir, fileName);
+  copyFileSync(sourcePath, destPath);
+
+  if (!todo.files.includes(fileName)) {
+    todo.files.push(fileName);
+  }
+  saveTodos(todos);
+  return fileName;
 }

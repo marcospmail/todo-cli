@@ -35,6 +35,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # App data
 .todos.json
+.todos/
 
 # Workflow
 .workflow/

@@ -4,27 +4,27 @@ import type { Mode } from "../store/types.ts";
 
 interface StatusBarProps {
   mode: Mode;
+  showHelp: boolean;
 }
 
-export function StatusBar({ mode }: StatusBarProps) {
+export function StatusBar({ mode, showHelp }: StatusBarProps) {
   if (mode === "add") {
-    return (
-      <Box marginTop={1}>
-        <Text dimColor>Type title, then Enter to save | Esc to cancel</Text>
-      </Box>
-    );
+    return null;
   }
   if (mode === "edit") {
-    return (
-      <Box marginTop={1}>
-        <Text dimColor>Edit title, then Enter to save | Esc to cancel</Text>
-      </Box>
-    );
+    return null;
   }
   if (mode === "delete") {
     return (
       <Box marginTop={1}>
         <Text color="red">Delete this todo? y/n</Text>
+      </Box>
+    );
+  }
+  if (mode === "files") {
+    return (
+      <Box marginTop={1}>
+        <Text dimColor>j/k:move  enter:open  esc:back</Text>
       </Box>
     );
   }
@@ -36,10 +36,14 @@ export function StatusBar({ mode }: StatusBarProps) {
     );
   }
 
+  if (!showHelp) {
+    return null;
+  }
+
   return (
     <Box marginTop={1}>
       <Text dimColor>
-        j/k:move  u/d:reorder  space:toggle  a:add  e:edit  x:delete  D:due  q:quit
+        j/k:move  u/d:reorder  space:toggle  a:add  e:edit  c:copy  ^v:attach  f:files  x:delete  D:due  q:quit  ?:hide
       </Text>
     </Box>
   );

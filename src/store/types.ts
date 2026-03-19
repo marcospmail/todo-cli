@@ -3,6 +3,7 @@ export interface Todo {
   title: string;
   done: boolean;
   dueDate: string | null;
+  files: string[];
   createdAt: string;
 }
 
@@ -10,7 +11,7 @@ export interface TodoStore {
   todos: Todo[];
 }
 
-export type Mode = "normal" | "add" | "edit" | "delete" | "due";
+export type Mode = "normal" | "add" | "edit" | "delete" | "due" | "files";
 
 export function isValidDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;

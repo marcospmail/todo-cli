@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { render, useInput, useApp, Box, Text } from "ink";
-import { basename } from "path";
+import { basename, join } from "path";
+import { existsSync } from "fs";
 import {
   loadTodos,
   addTodo,
@@ -9,6 +10,7 @@ import {
   editTodo,
   setDueDate,
   moveTodo,
+  attachFile,
 } from "../store/todos.ts";
 import type { Mode } from "../store/types.ts";
 import { isValidDate } from "../store/types.ts";
@@ -29,6 +31,22 @@ function App() {
   const [cursor, setCursor] = useState(0);
   const [mode, setMode] = useState<Mode>("normal");
   const [inputValue, setInputValue] = useState("");
+  const [showHelp, setShowHelp] = useState(false);
+  const [flash, setFlash] = useState("");
+  const [fileCursor, setFileCursor] = useState(0);
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const showFlash = useCallback((msg: string) => {
+    setFlash(msg);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setFlash(""), 1500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+    };
+  }, []);
 
   const refresh = useCallback(() => {
     try {
@@ -65,6 +83,23 @@ function App() {
         setMode("normal");
         setInputValue("");
         setError("");
+      }
+      return;
+    }
+
+    if (mode === "files") {
+      const todo = todos[cursor];
+      const files = todo?.files ?? [];
+      if (key.escape || key.backspace) {
+        setMode("normal");
+        setFileCursor(0);
+      } else if (input === "j" || key.downArrow) {
+        setFileCursor((c) => Math.min(c + 1, files.length - 1));
+      } else if (input === "k" || key.upArrow) {
+        setFileCursor((c) => Math.max(c - 1, 0));
+      } else if (key.return && todo && files[fileCursor]) {
+        const filePath = join(process.cwd(), ".todos", "attachments", todo.id, files[fileCursor]!);
+        Bun.spawnSync(["open", filePath]);
       }
       return;
     }
@@ -147,6 +182,56 @@ function App() {
       setMode("delete");
     }
 
+    if (input === "c" && todos.length > 0) {
+      const todo = todos[cursor];
+      if (todo) {
+        Bun.spawnSync(["pbcopy"], { stdin: Buffer.from(todo.title) });
+        showFlash("Copied!");
+      }
+    }
+
+    if (key.ctrl && input === "v" && todos.length > 0) {
+      const todo = todos[cursor];
+      if (todo) {
+        const result = Bun.spawnSync([
+          "osascript",
+          "-e",
+          'set theFiles to the clipboard as «class furl»',
+          "-e",
+          'POSIX path of theFiles',
+        ]);
+        let filePath = result.stdout.toString().trim();
+        if (!filePath) {
+          filePath = Bun.spawnSync(["pbpaste"]).stdout.toString().trim();
+        }
+        if (filePath && existsSync(filePath)) {
+          try {
+            const name = attachFile(todo.id, filePath);
+            refresh();
+            showFlash(`Attached: ${name}`);
+          } catch {
+            showFlash("Failed to attach file");
+          }
+        } else {
+          showFlash("No file in clipboard");
+        }
+      }
+    }
+
+    if (input === "f" && todos.length > 0) {
+      const todo = todos[cursor];
+      if (todo && todo.files.length > 0) {
+        setMode("files");
+        setFileCursor(0);
+      } else {
+        showFlash("No files attached");
+      }
+    }
+
+    if (input === "?") {
+      setShowHelp((v) => !v);
+    }
+
     if (input === "D" && todos.length > 0) {
       const todo = todos[cursor];
       if (todo) {
@@ -216,7 +301,24 @@ function App() {
         <Text dimColor> ({todos.length})</Text>
       </Box>
 
-      <TodoList todos={todos} cursor={cursor} />
+      {mode !== "add" && mode !== "edit" && mode !== "files" && (
+        <TodoList todos={todos} cursor={cursor} />
+      )}
+
+      {mode === "files" && todos[cursor] && (
+        <Box flexDirection="column">
+          <Text bold>{todos[cursor]!.title}</Text>
+          <Box flexDirection="column" marginTop={1}>
+            {todos[cursor]!.files.map((file, i) => (
+              <Text key={file} bold={i === fileCursor} color={i === fileCursor ? "cyan" : undefined}>
+                {i === fileCursor ? ">" : " "} {file}
+              </Text>
+            ))}
+          </Box>
+        </Box>
+      )}
+
+      {flash && <Text color="green">{flash}</Text>}
 
       {mode === "add" && (
         <AddInput
@@ -226,12 +328,15 @@ function App() {
         />
       )}
 
-      {mode === "edit" && (
-        <EditInput
-          value={inputValue}
-          onChange={setInputValue}
-          onSubmit={handleEditSubmit}
-        />
+      {mode === "edit" && todos[cursor] && (
+        <Box flexDirection="column">
+          <Text dimColor>{todos[cursor]!.title}</Text>
+          <EditInput
+            value={inputValue}
+            onChange={setInputValue}
+            onSubmit={handleEditSubmit}
+          />
+        </Box>
       )}
 
       {mode === "due" && (
@@ -248,7 +353,7 @@ function App() {
         </Box>
       )}
 
-      <StatusBar mode={mode} />
+      <StatusBar mode={mode} showHelp={showHelp} />
     </Box>
   );
 }
