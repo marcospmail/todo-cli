@@ -3,7 +3,7 @@
   "module": "src/index.tsx",
   "type": "module",
   "bin": {
-    "todo": "bin/todo.ts"
+    "todo-cli": "bin/todo-cli.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
